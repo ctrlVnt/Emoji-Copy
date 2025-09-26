@@ -1,10 +1,61 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
+import GLib from "gi://GLib";
 
 import { EmojiButton } from "./emojiButton.js";
 
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
+
+import { ar } from "./locale/ar/LC_EMOJI/ar.js";
+import { bg } from "./locale/bg/LC_EMOJI/bg.js";
+import { cs } from "./locale/cs/LC_EMOJI/cs.js";
+import { de } from "./locale/de/LC_EMOJI/de.js";
+import { eo } from "./locale/eo/LC_EMOJI/eo.js";
+import { es } from "./locale/es_ES/LC_EMOJI/es.js";
+import { fr } from "./locale/es/LC_EMOJI/fr.js";
+import { gl } from "./locale/gl/LC_EMOJI/gl.js";
+import { hu } from "./locale/hu/LC_EMOJI/hu.js";
+import { it } from "./locale/es/LC_EMOJI/it.js";
+import { nl } from "./locale/nl/LC_EMOJI/nl.js";
+import { oc } from "./locale/oc/LC_EMOJI/oc.js";
+import { pl } from "./locale/pl/LC_EMOJI/pl.js";
+import { pt } from "./locale/pt_BR/LC_EMOJI/pt.js";
+import { ru } from "./locale/ru/LC_EMOJI/ru.js";
+import { tr } from "./locale/tr/LC_EMOJI/tr.js";
+import { zh } from "./locale/zh_Hans/LC_EMOJI/zh.js";
+
+  
+const searchTranslations = {
+  fr,
+  it,
+  ar,
+  bg,
+  cs,
+  de,
+  eo,
+  es,
+  gl,
+  hu,
+  nl,
+  oc,
+  pl,
+  pt,
+  ru,
+  tr,
+  zh
+};
+
+
+function getUserLang() {
+  let langs = GLib.get_language_names();
+  if (langs.length > 0) {
+    return langs[0].split("_")[0];
+  }
+  return "en";
+}
+
+
 
 // DEPRECATED?
 export class EmojiSearchItem {
@@ -108,11 +159,32 @@ export class EmojiSearchItem {
     }
     searchedText = searchedText.toLowerCase().trim();
 
+    const lang = getUserLang();
+    const dict = searchTranslations[lang] || {};
+
+    let results = [];
+
+    if (dict[searchedText]) {
+      // If the word is translated I search english synonims
+      for (const synonym of dict[searchedText]) {
+        results = results.concat(
+          this.emojiCopy.sqlite.search_description(
+            synonym,
+            this._settings.get_int("skin-tone")
+          )
+        );
+      }
+    } else {
+      // else i do a normal search
+      results = this.emojiCopy.sqlite.search_description(
+        searchedText,
+        this._settings.get_int("skin-tone")
+      );
+    }
+
     for (let j = 0; j < this._nbColumns; j++) {
       this._recents[j].super_btn.label = "";
     }
-
-    const results = this.emojiCopy.sqlite.search_description(searchedText, this._settings.get_int("skin-tone"));
 
     let firstEmptyIndex = 0;
     for (let i = 0; i < results.length; i++) {

@@ -164,7 +164,7 @@ export class EmojiSearchItem {
     let results = [];
 
     if (dict[searchedText]) {
-      // If the word is translated I search english synonims
+      // If the word is translated I search English synonyms
       for (const synonym of dict[searchedText]) {
         results = results.concat(
           this.emojiCopy.sqlite.search_description(

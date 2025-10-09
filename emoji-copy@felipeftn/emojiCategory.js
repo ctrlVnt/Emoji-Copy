@@ -25,6 +25,7 @@ export class EmojiCategory {
    * The category and its button have to be built without being loaded, to "avoid"
    * memory issues with emojis' image textures.
    * PS: For some reason, when we render everything, there is a bunch of Lag...
+   * I will be using jsdocs on the functions in the future for better documentation & readable code.
    */
   constructor(emojiCopy, categoryName, iconName, id) {
     this.super_item = new PopupMenu.PopupSubMenuMenuItem(categoryName);
@@ -90,6 +91,13 @@ export class EmojiCategory {
     this.load();
   }
 
+  /**
+   * Called when skin tone or gender is changed in the options bar
+   * We need to refresh the emojis shown in the category
+   * PS: We only do this if the category is open, to avoid unnecessary
+   * memory usage.
+   * @private
+   */
   _onFilterChanged() {
     if (this.super_item.menu && this.super_item.menu.isOpen) {
       this.emojiButtons = [];

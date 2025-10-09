@@ -151,7 +151,7 @@ search_description(search_text, skin_tone = 0, gender = 0) {
       case 1: // Women
         return ` AND (description LIKE '%woman%' OR (description NOT LIKE '%man%' AND description NOT LIKE '%woman%'))`;
       case 2: // Men  
-        return ` AND (description LIKE '%man%' AND description NOT LIKE '%woman%' OR (description NOT LIKE '%man%' AND description NOT LIKE '%woman%'))`;
+        return ` AND ((description LIKE '%man%' AND description NOT LIKE '%woman%') OR (description NOT LIKE '%man%' AND description NOT LIKE '%woman%'))`;
       default: // No filter
         return '';
     }

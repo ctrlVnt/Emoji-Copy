@@ -174,7 +174,7 @@ export class EmojiSearchItem {
         );
       }
     } else {
-      // else i do a normal search
+      // else I do a normal search
       results = this.emojiCopy.sqlite.search_description(
         searchedText,
         this._settings.get_int("skin-tone")

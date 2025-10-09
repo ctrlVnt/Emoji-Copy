@@ -16,7 +16,7 @@ import { es } from "./locale/es_ES/LC_EMOJI/es.js";
 import { fr } from "./locale/fr/LC_EMOJI/fr.js";
 import { gl } from "./locale/gl/LC_EMOJI/gl.js";
 import { hu } from "./locale/hu/LC_EMOJI/hu.js";
-import { it } from "./locale/es/LC_EMOJI/it.js";
+import { it } from "./locale/it/LC_EMOJI/it.js";
 import { nl } from "./locale/nl/LC_EMOJI/nl.js";
 import { oc } from "./locale/oc/LC_EMOJI/oc.js";
 import { pl } from "./locale/pl/LC_EMOJI/pl.js";

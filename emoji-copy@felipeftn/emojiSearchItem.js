@@ -13,7 +13,7 @@ import { cs } from "./locale/cs/LC_EMOJI/cs.js";
 import { de } from "./locale/de/LC_EMOJI/de.js";
 import { eo } from "./locale/eo/LC_EMOJI/eo.js";
 import { es } from "./locale/es_ES/LC_EMOJI/es.js";
-import { fr } from "./locale/es/LC_EMOJI/fr.js";
+import { fr } from "./locale/fr/LC_EMOJI/fr.js";
 import { gl } from "./locale/gl/LC_EMOJI/gl.js";
 import { hu } from "./locale/hu/LC_EMOJI/hu.js";
 import { it } from "./locale/es/LC_EMOJI/it.js";

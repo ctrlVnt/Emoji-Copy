@@ -25,7 +25,6 @@ import { ru } from "./locale/ru/LC_EMOJI/ru.js";
 import { tr } from "./locale/tr/LC_EMOJI/tr.js";
 import { zh } from "./locale/zh_Hans/LC_EMOJI/zh.js";
 
-  
 const searchTranslations = {
   fr,
   it,

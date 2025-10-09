@@ -43,7 +43,7 @@ export class SQLite {
     `);
   }
 
-search_description(search_text, skin_tone = 0) {
+search_description(search_text, skin_tone = 0, gender = 0) {
   const buildQuery = (pattern) => {
     const sql_string = search_text
       .split(" ")
@@ -51,10 +51,12 @@ search_description(search_text, skin_tone = 0) {
       .join(" AND ");
 
     const skin_filter = skin_tone != 0 
-      ? ` AND (skin_tone = '' OR skin_tone LIKE '%${this.get_skin_tone(skin_tone)}%')`
-      : '';
+      ? ` AND skin_tone LIKE '%${this.get_skin_tone(skin_tone)}%'`
+      : ` AND skin_tone = ''`;
 
-    return `SELECT * FROM emojis WHERE ${sql_string}${skin_filter} ORDER BY clicked_times DESC;`;
+    const gender_filter = this.get_gender_filter(gender);
+
+    return `SELECT * FROM emojis WHERE ${sql_string}${skin_filter}${gender_filter} ORDER BY clicked_times DESC;`;
   };
 
   // Try prefix search first
@@ -71,9 +73,28 @@ search_description(search_text, skin_tone = 0) {
   return [...prefix_results, ...contains_results.filter(item => !seen.has(item.unicode))];
 }
 
-  select_by_group(group) {
+  /**
+   * Selects emojis by group, filtered by skin tone and gender if provided.
+   * If skin_tone is not 0, only emojis with the matching skin tone or no skin tone (e.g., objects) are returned.
+   * If gender is not 0, only emojis with the matching gender or no gender preference are returned.
+   * @param {string} group - The emoji group/category
+   * @param {number} skin_tone - The selected skin tone (0 = no filter)
+   * @param {number} gender - The selected gender (0 = no filter, 1 = women, 2 = men)
+   */
+  select_by_group(group, skin_tone = 0, gender = 0) {
+    let skin_filter = '';
+    if (skin_tone != 0) {
+      // Show emojis that either have no skin tone (objects, etc) or match the selected skin tone
+      skin_filter = ` AND skin_tone LIKE '%${this.get_skin_tone(skin_tone)}%'`;
+    } else {
+      // Show all emojis in the group
+      skin_filter = ` AND skin_tone = ''`;
+    }
+
+    const gender_filter = this.get_gender_filter(gender);
+
     return this.query(`
-      SELECT * FROM emojis WHERE emoji_group='${group}' AND (skin_tone='' OR skin_tone='person');
+      SELECT * FROM emojis WHERE emoji_group='${group}'${skin_filter}${gender_filter};
     `);
   }
 
@@ -119,5 +140,20 @@ search_description(search_text, skin_tone = 0) {
       5: "dark",
     };
     return skin_tones[skin_tone];
+  }
+
+  get_gender_filter(gender) {
+    // Gender filtering based on description field content:
+    // 0: no filter (show all)
+    // 1: women (show emojis with "woman" in description or gender-neutral emojis)
+    // 2: men (show emojis with "man" in description but not "woman", or gender-neutral emojis)
+    switch (gender) {
+      case 1: // Women
+        return ` AND (description LIKE '%woman%' OR (description NOT LIKE '%man%' AND description NOT LIKE '%woman%'))`;
+      case 2: // Men  
+        return ` AND ((description LIKE '%man%' AND description NOT LIKE '%woman%') OR (description NOT LIKE '%man%' AND description NOT LIKE '%woman%'))`;
+      default: // No filter
+        return '';
+    }
   }
 }

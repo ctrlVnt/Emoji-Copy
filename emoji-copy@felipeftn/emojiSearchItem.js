@@ -35,6 +35,9 @@ export class EmojiSearchItem {
       this._settings.connect('changed::skin-tone', () => {
         this._onSearchTextChanged();
       });
+      this._settings.connect('changed::gender', () => {
+        this._onSearchTextChanged();
+      });
     }
 
     this.super_item.add_child(this.searchEntry);
@@ -120,20 +123,24 @@ export class EmojiSearchItem {
 
     // Get results for selected skin tone and for yellow (no skin tone)
     const selectedTone = this._settings.get_int("skin-tone");
+    const selectedGender = this._settings.get_int("gender");
+
+    // I might move this toneResults/yellowResults logic to emojiCopy.sqlite soon!
     let results = [];
     if (selectedTone !== 0) {
       // First, get only results with the selected skin tone
-      const toneResults = this.emojiCopy.sqlite.search_description(searchedText, selectedTone)
+      const toneResults = this.emojiCopy.sqlite.search_description(searchedText, selectedTone, selectedGender)
         .filter(e => e.skin_tone && e.skin_tone !== '');
       // Then, get yellow (no skin tone) results
-      const yellowResults = this.emojiCopy.sqlite.search_description(searchedText, 0)
+      const yellowResults = this.emojiCopy.sqlite.search_description(searchedText, 0, selectedGender)
         .filter(e => !e.skin_tone || e.skin_tone === '');
       // Combine, prioritizing selected tone
       results = [...toneResults, ...yellowResults];
     } else {
-      // Only yellow (no skin tone) results
-      results = this.emojiCopy.sqlite.search_description(searchedText, 0)
-        .filter(e => !e.skin_tone || e.skin_tone === '');
+      // Only yellow (no skin tone) results as default
+      results = this.emojiCopy.sqlite.search_description(searchedText, 0, selectedGender)
+        // Get this back if needed
+        // .filter(e => !e.skin_tone || e.skin_tone === '');
     }
 
     let firstEmptyIndex = 0;

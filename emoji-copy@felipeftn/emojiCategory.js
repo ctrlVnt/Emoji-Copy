@@ -25,14 +25,6 @@ export class EmojiCategory {
    * The category and its button have to be built without being loaded, to "avoid"
    * memory issues with emojis' image textures.
    * PS: For some reason, when we render everything, there is a bunch of Lag...
-   * I will be using jsdocs on the functions in the future for better documentation & readable code.
-   */
-  /**
-   * EmojiCategory constructor sets up the emoji category UI, loads emojis, and connects skin tone change events.
-   * @param {*} emojiCopy - Main extension object
-   * @param {string} categoryName - Name of the emoji category
-   * @param {string} iconName - Icon for the category
-   * @param {number} id - Category ID
    */
   constructor(emojiCopy, categoryName, iconName, id) {
     this.super_item = new PopupMenu.PopupSubMenuMenuItem(categoryName);
@@ -42,22 +34,41 @@ export class EmojiCategory {
     this.emojiButtons = []; // used for searching, and for updating the size/style
     this._nbColumns = 10; // some random default value
     this.id = id;
-    // Load only yellow (no skin tone) emojis for this category
     this.emojis = this.emojiCopy.sqlite.select_by_group(
-      EMOJIS_CATEGORIES[this.id]
-    ).filter(e => !e.skin_tone || e.skin_tone === '');
+      EMOJIS_CATEGORIES[this.id],
+    );
 
-    // Set up the options bar (skin tone/gender selectors)
+    this.super_item.visible = false;
+    this.super_item.reactive = false;
+    this.super_item._triangleBin.visible = false;
+
+    const emoji_size = this._settings.get_int("emojisize");
+    const nbcols = this._nbColumns;
+    this.super_item.label.set_style(`width: ${emoji_size * Math.max(1, nbcols - 3) }px;`);
+
+    // These options bar widgets have the same type for all categories to
+    // simplify the update method
     if ((this.id == 1) || (this.id == 5)) {
       this.skinTonesBar = new SkinTonesBar(this.emojiCopy, true);
     } else {
       this.skinTonesBar = new SkinTonesBar(this.emojiCopy, false);
     }
+
+    // Smileys & body Peoples Activities
     if ((this.id == 0) || (this.id == 1) || (this.id == 5)) {
       this.skinTonesBar.addBar(this.super_item);
     }
 
-    // Set up the category button
+    // Listen for skin tone changes and refresh search results
+    if (this._settings && this._settings.connect) {
+      this._settings.connect('changed::skin-tone', () => {
+        this._onFilterChanged();
+      });
+      this._settings.connect('changed::gender', () => {
+        this._onFilterChanged();
+      });
+    }
+
     this.categoryButton = new St.Button({
       reactive: true,
       can_focus: true,
@@ -74,19 +85,38 @@ export class EmojiCategory {
     });
     this.categoryButton.connect("clicked", this._toggle.bind(this));
 
-    // Set initial visibility and style for the category menu item
-    this.super_item.visible = false;
-    this.super_item.reactive = false;
-    this.super_item._triangleBin.visible = false;
-
-    // Set the label width based on emoji size and columns
-    const emoji_size = this._settings.get_int("emojisize");
-    const nbcols = this._nbColumns;
-    this.super_item.label.set_style(`width: ${emoji_size * Math.max(1, nbcols - 3) }px;`);
-
     this._built = false; // will be true once the user opens the category
     this._loaded = false; // will be true once loaded
     this.load();
+  }
+
+  _onFilterChanged() {
+    if (this.super_item.menu && this.super_item.menu.isOpen) {
+      this.emojiButtons = [];
+      this.clear();
+      // Get results for selected skin tone and for yellow (no skin tone)
+      const selectedTone = this._settings.get_int("skin-tone");
+      const selectedGender = this._settings.get_int("gender");
+      this.emojis = this.emojiCopy.sqlite.select_by_group(
+        EMOJIS_CATEGORIES[this.id],
+        selectedTone,
+        selectedGender
+      );
+
+      // Update the emoji buttons list
+      for (let i = 0; i < this.emojis.length; i++) {
+        let button = new EmojiButton(
+          this.emojiCopy,
+          this.emojis[i].unicode,
+          this.emojis[i].description,
+        );
+        this.emojiButtons.push(button);
+      }
+      this._built = false;
+      this.build();
+      this.updateStyle();
+      this.emojiCopy._onSearchTextChanged();
+    }
   }
 
   _addErrorLine(error_message) {

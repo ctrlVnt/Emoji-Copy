@@ -31,7 +31,7 @@ clean:
 	@rm --force --recursive $(ZIP_NAME) $(SCHEMA_COMPILED_FILE) $(ZIP_TEMP) $(EMOJIS_DB) $(EXTENSION_PATH)
 	
 debug: clean install
-	dbus-run-session -- gnome-shell --nested --wayland
+	dbus-run-session -- gnome-shell --devkit
 
 # Just to make it clear ($@ => First argument; $^ second argument)
 # e.g: $@ => $(ZIP_NAME); $^ => $(ZIP_CONTENT).

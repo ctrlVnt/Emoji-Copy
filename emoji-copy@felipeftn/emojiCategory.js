@@ -25,6 +25,7 @@ export class EmojiCategory {
    * The category and its button have to be built without being loaded, to "avoid"
    * memory issues with emojis' image textures.
    * PS: For some reason, when we render everything, there is a bunch of Lag...
+   * I will be using jsdocs on the functions in the future for better documentation & readable code.
    */
   constructor(emojiCopy, categoryName, iconName, id) {
     this.super_item = new PopupMenu.PopupSubMenuMenuItem(categoryName);
@@ -59,6 +60,16 @@ export class EmojiCategory {
       this.skinTonesBar.addBar(this.super_item);
     }
 
+    // Listen for skin tone changes and refresh search results
+    if (this._settings && this._settings.connect) {
+      this._settings.connect('changed::skin-tone', () => {
+        this._onFilterChanged();
+      });
+      this._settings.connect('changed::gender', () => {
+        this._onFilterChanged();
+      });
+    }
+
     this.categoryButton = new St.Button({
       reactive: true,
       can_focus: true,
@@ -78,6 +89,42 @@ export class EmojiCategory {
     this._built = false; // will be true once the user opens the category
     this._loaded = false; // will be true once loaded
     this.load();
+  }
+
+  /**
+   * Called when skin tone or gender is changed in the options bar
+   * We need to refresh the emojis shown in the category
+   * PS: We only do this if the category is open, to avoid unnecessary
+   * memory usage.
+   * @private
+   */
+  _onFilterChanged() {
+    if (this.super_item.menu && this.super_item.menu.isOpen) {
+      this.emojiButtons = [];
+      this.clear();
+      // Get results for selected skin tone and for yellow (no skin tone)
+      const selectedTone = this._settings.get_int("skin-tone");
+      const selectedGender = this._settings.get_int("gender");
+      this.emojis = this.emojiCopy.sqlite.select_by_group(
+        EMOJIS_CATEGORIES[this.id],
+        selectedTone,
+        selectedGender
+      );
+
+      // Update the emoji buttons list
+      for (let i = 0; i < this.emojis.length; i++) {
+        let button = new EmojiButton(
+          this.emojiCopy,
+          this.emojis[i].unicode,
+          this.emojis[i].description,
+        );
+        this.emojiButtons.push(button);
+      }
+      this._built = false;
+      this.build();
+      this.updateStyle();
+      this.emojiCopy._onSearchTextChanged();
+    }
   }
 
   _addErrorLine(error_message) {

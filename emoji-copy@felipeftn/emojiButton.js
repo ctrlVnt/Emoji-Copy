@@ -55,6 +55,15 @@ export class EmojiButton {
     }
   }
 
+  _cleanKeywords() {
+    return this.keywords
+      .replaceAll("HAS_TONE", "")
+      .replaceAll("HAS_GENDER", "")
+      .replaceAll("IS_GENDERED", "")
+      .replaceAll("OK", "")
+      .trim();
+  }
+
   build(category) {
     this.super_btn = new St.Button({
       style_class: "EmojisItemStyle",
@@ -66,30 +75,28 @@ export class EmojiButton {
     this.super_btn.connect("button-press-event", this.onButtonPress.bind(this));
     this.super_btn.connect("key-press-event", this.onKeyPress.bind(this));
 
-    if (category == null || this.keywords == []) {
+    if (category == null || this.keywords.length === 0) {
       return;
     }
 
     // Update the category label on hover, allowing the user to know the
     // name of the emoji he's copying.
-    this.super_btn.connect("notify::hover", (a, _) => {
+    this.super_btn.connect("notify::hover", (actor, _) => {
       // Show the emoji name in the category label
-      if (a.hover) {
-        category.super_item.label.text =
-          this.keywords
-            .replaceAll("HAS_TONE", "")
-            .replaceAll("HAS_GENDER", "")
-            .replaceAll("OK", "");
+      if (actor.hover) {
+        const cleanKeywords = this._cleanKeywords();
+        category.super_item.label.text = cleanKeywords;
 
         // Starts a timer to show the tooltip
+        if (this._tooltipTimeoutId) {
+          GLib.source_remove(this._tooltipTimeoutId);
+          this._tooltipTimeoutId = null;
+        }
         this._tooltipTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-          let [x, y, _] = global.get_pointer();
-          let clean = this.keywords
-            .replaceAll("HAS_TONE", "")
-            .replaceAll("HAS_GENDER", "")
-            .replaceAll("OK", "")
-            .trim();
-          EmojiButton.tooltipLabel.text = `${clean.split(" ")[0]} ${clean.split(" ")[1]}`;
+          const [x, y] = global.get_pointer();
+          const clean = this._cleanKeywords();
+          const words = clean.split(" ");
+          EmojiButton.tooltipLabel.text = `${words[0] || ''} ${words[1] || ''}`.trim();
           EmojiButton.tooltipLabel.set_position(x + 16, y - 8);
           EmojiButton.tooltipLabel.visible = true;
           this._tooltipTimeoutId = null;
@@ -109,9 +116,9 @@ export class EmojiButton {
     });
 
     // Move tooltip with mouse
-    this.super_btn.connect('motion-event', (actor, event) => {
+    this.super_btn.connect('motion-event', (_, event) => {
       if (EmojiButton.tooltipLabel.visible) {
-        let [x, y] = event.get_coords();
+        const [x, y] = event.get_coords();
         EmojiButton.tooltipLabel.set_position(x + 16, y - 8);
       }
       return Clutter.EVENT_PROPAGATE;
@@ -120,31 +127,30 @@ export class EmojiButton {
 
   destroy() {
     if (this._pasteHackCallbackId) {
+      GLib.source_remove(this._pasteHackCallbackId);
       this._pasteHackCallbackId = null;
+    }
+    if (this._tooltipTimeoutId) {
+      GLib.source_remove(this._tooltipTimeoutId);
+      this._tooltipTimeoutId = null;
     }
     this.super_btn.destroy();
   }
 
   updateStyle(forcedStyle) {
-    let fontStyle;
-    if (forcedStyle) {
-      fontStyle = forcedStyle;
-    } else {
-      fontStyle = "font-size: " + this._settings.get_int("emojisize") +
-        "px;";
-      fontStyle += " color: #FFFFFF;";
-    }
+    const fontStyle = forcedStyle || 
+      `font-size: ${this._settings.get_int("emojisize")}px; color: #FFFFFF;`;
     this.super_btn.style = fontStyle;
   }
 
   onKeyPress(_, e) {
-    let symbol = e.get_key_symbol();
+    const symbol = e.get_key_symbol();
     // Main return key (GS > 3.35)     Main return key (GS < 3.35)           Numpad return key
     if (
       symbol == Clutter.KEY_Return || symbol == Clutter.Return ||
       symbol == Clutter.KP_Enter
     ) {
-      let emojiToCopy = this.getTaggedEmoji();
+      const emojiToCopy = this.getTaggedEmoji();
       this.emojiCopy.sqlite.increment_selection(emojiToCopy);
       const state = typeof e.get_state === 'function' ? e.get_state() : 0;
       const majPressed = (state & Clutter.ModifierType.SHIFT_MASK) !== 0;
@@ -168,8 +174,8 @@ export class EmojiButton {
    * - right click adds the emoji at the end of the current clipboard content (and does not close the menu).
    */
   onButtonPress(_, event) {
-    let mouseButton = event.get_button();
-    let emojiToCopy = this.getTaggedEmoji();
+    const mouseButton = event.get_button();
+    const emojiToCopy = this.getTaggedEmoji();
     if (emojiToCopy == null) {
       return Clutter.EVENT_PROPAGATE;
     }
@@ -242,28 +248,29 @@ export class EmojiButton {
    * If all tags are false, it returns unmodified .super_btn.label
    */
   getTaggedEmoji() {
-    let currentEmoji = this.super_btn.label;
-    if (currentEmoji == "") return;
+    const currentEmoji = this.super_btn.label;
+    if (currentEmoji === "") return;
 
-    let tonable = this.tags[0];
-    let genrable = this.tags[1];
-    let gendered = this.tags[2];
+    const [tonable, genrable, gendered] = this.tags;
     let temp = currentEmoji;
+    
     if (tonable) {
-      let tone_index = this._settings.get_int("skin-tone");
+      const toneIndex = this._settings.get_int("skin-tone");
       if (gendered) {
-        currentEmoji = currentEmoji.replace(
+        const genderIndex = this._settings.get_int("gender");
+        temp = currentEmoji.replace(
           GENDERS2[0],
-          GENDERS2[this._settings.get_int("gender")] + TONES[tone_index],
+          GENDERS2[genderIndex] + TONES[toneIndex],
         );
-        temp = currentEmoji;
       } else {
-        temp += TONES[tone_index];
+        temp += TONES[toneIndex];
       }
     }
+    
     if (genrable) {
       temp += GENDERS[this._settings.get_int("gender")];
     }
+    
     this.emojiCopy.searchItem.shiftFor(temp);
     return temp;
   }
@@ -301,7 +308,7 @@ export class EmojiButton {
         );
 
         this._pasteHackCallbackId = undefined;
-        return false;
+        return GLib.SOURCE_REMOVE;
       },
     );
   }

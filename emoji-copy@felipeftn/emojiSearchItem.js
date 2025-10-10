@@ -46,12 +46,18 @@ const searchTranslations = {
 };
 
 
+let _cachedUserLang = null;
 function getUserLang() {
+  if (_cachedUserLang !== null) {
+    return _cachedUserLang;
+  }
   let langs = GLib.get_language_names();
   if (langs.length > 0) {
-    return langs[0].split("_")[0];
+    _cachedUserLang = langs[0].split("_")[0];
+  } else {
+    _cachedUserLang = "en";
   }
-  return "en";
+  return _cachedUserLang;
 }
 
 
